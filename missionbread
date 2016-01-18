@@ -41,7 +41,6 @@ class MissionRed():
     def __init__(self, display = False):
         self.display = display
         self.running = True
-        self.score = 0
         self.reaction = [0]
 
         self.timer = pygame.time.Clock()
@@ -54,9 +53,6 @@ class MissionRed():
 
         self.screen = pygame.display.set_mode(display['sizes'], pygame.FULLSCREEN)
         pygame.display.set_caption("%s - %s" % (display['title'], display['descr']))
-
-    def set_caption(self):
-        pygame.display.set_caption("%s - %s | %d fps" % (self.display['title'], self.display['descr'], int(self.timer.get_fps())))
 
     def catch_quit(self):
         for event in self.events:
@@ -71,7 +67,6 @@ class MissionRed():
                 new_targets = []
                 for target in self.targets:
                     if (mposx - target.pos[0]) ** 2 + (mposy - target.pos[1]) ** 2 < target.r ** 2 :
-                        self.score += 1
                         new_targets.append(Target())
                         self.shots.append((mposx, mposy, target.age, self.shot_lifespan))
                         self.reaction.append(target.age)
@@ -132,37 +127,44 @@ class MissionRed():
         return False
 
 if __name__ == "__main__":
+    # get the display initialized
     game = MissionRed(display)
 
-    i = 0
+    # main loop
     while game.running:
+        # tick the engine clock
         game.timer.tick(fps)
-        if i % 32 == 0:
-            game.set_caption()
 
+        # get the events in the beginning of each frame
         game.events = pygame.event.get()
+        # check if user asks to stop :)
         game.catch_quit()
 
+        # check if shot was made
+        game.catch_shot()
+
+        # draw the background and the average reaction time
         game.draw_background()
+
+        # draw targets
         for t in game.targets:
             game.draw_target(t)
+
+        # draw shots value (reaction time)
         new_shots = []
         for shot in game.shots:
-            new_shot = game.draw_shot(shot)
-            if new_shot:
-                new_shots.append(new_shot)
+            s = game.draw_shot(shot)
+            if s:
+                new_shots.append(s)
         game.shots = new_shots
 
-        game.catch_shot()
+        # update targets with new radius
         new_targets = []
         for t in game.targets:
             new_targets.append(game.update_target(t))
         game.targets = new_targets
 
+        # draw the image
         pygame.display.update()
-
-        i += 1
-        if i > 1024:
-            i = 0
 
     pygame.quit()
