@@ -1,0 +1,168 @@
+#!/usr/bin/env python
+
+import random
+
+import pygame
+from pygame import *
+
+pygame.init()
+
+fps = 60
+display = {}
+display['sizes'] = (pygame.display.Info().current_w, pygame.display.Info().current_h)
+display['title'] = "MissionRed"
+display['descr'] = "aim training drill"
+
+class Palette():
+    background      = "#333333"
+    target          = "#ffffff"
+    text            = "#666666"
+    text_bg         = "#444444"
+    target_border   = "#ff6666"
+
+class Target():
+    def __init__(self, pos = False, r = 1, r_max = 64, age = 0, lifespan = 4000):
+        self.r = r
+        self.r_max = r_max
+        self.age = age
+        self.lifespan = lifespan
+
+        if pos == False:
+            pos = self.generate_pos()
+        self.pos = pos
+
+    def generate_pos(self):
+        x = random.randint(0 + self.r_max, display['sizes'][0] - self.r_max)
+        y = random.randint(0 + self.r_max, display['sizes'][1] - self.r_max)
+
+        return [x, y]
+
+class MissionRed():
+    def __init__(self, display = False):
+        self.display = display
+        self.running = True
+        self.score = 0
+        self.reaction = [0]
+
+        self.timer = pygame.time.Clock()
+
+        self.shots = []
+        self.shot_lifespan = 700
+        self.targets = []
+        for i in range(0, 3):
+            self.targets.append(Target())
+
+        self.screen = pygame.display.set_mode(display['sizes'], pygame.FULLSCREEN)
+        pygame.display.set_caption("%s - %s" % (display['title'], display['descr']))
+
+    def set_caption(self):
+        pygame.display.set_caption("%s - %s | %d fps" % (self.display['title'], self.display['descr'], int(self.timer.get_fps())))
+
+    def catch_quit(self):
+        for event in self.events:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and (event.key == pygame.K_ESCAPE or event.key == pygame.K_q)):
+                self.running = False
+
+    def catch_shot(self):
+        for event in self.events:
+            if event.type == pygame.MOUSEBUTTONUP:
+                mposx, mposy = pygame.mouse.get_pos()
+
+                new_targets = []
+                for target in self.targets:
+                    if (mposx - target.pos[0]) ** 2 + (mposy - target.pos[1]) ** 2 < target.r ** 2 :
+                        self.score += 1
+                        new_targets.append(Target())
+                        self.shots.append((mposx, mposy, target.age, self.shot_lifespan))
+                        self.reaction.append(target.age)
+                    else:
+                        new_targets.append(target)
+
+                self.targets = new_targets
+
+    def update_target(self, target):
+        target.age += self.timer.get_time()
+        if target.age >= target.lifespan:
+            self.reaction.append(target.age)
+            return Target()
+
+        if target.age < target.lifespan / 2:
+            target.r = int(target.r_max * target.age * 2 / target.lifespan)
+        else:
+            target.r = target.r_max * 2 - int(target.r_max * target.age * 2 / target.lifespan)
+        return target
+
+    def draw_background(self):
+        background = Surface(self.display['sizes'])
+        background.fill(Color(Palette.background))
+
+        font = pygame.font.Font(None, 256)
+        text = font.render(str(sum(self.reaction)/len(self.reaction)), 1, Color(Palette.text_bg))
+
+        textpos = text.get_rect()
+        textpos.centerx = background.get_rect().centerx
+        textpos.centery = background.get_rect().centery
+
+        self.screen.blit(background, (0, 0))
+        self.screen.blit(text, textpos)
+
+    def draw_target(self, target, border_width = 4):
+        target_surface = Surface((target.r * 2, target.r * 2), pygame.SRCALPHA, 32)
+
+        if target.r < border_width:
+            pygame.draw.circle(target_surface, Color(Palette.target_border), (target.r, target.r), target.r)
+        else:
+            pygame.draw.circle(target_surface, Color(Palette.target), (target.r, target.r), target.r - border_width / 2)
+            pygame.draw.circle(target_surface, Color(Palette.target_border), (target.r, target.r), target.r, border_width)
+
+        self.screen.blit(target_surface, (target.pos[0] - target.r, target.pos[1] - target.r))
+
+    def draw_shot(self, shot):
+        x, y, delta_t, age = shot
+
+        font = pygame.font.Font(None, 32)
+        text = font.render(str(delta_t), 1, Color(Palette.text))
+
+        self.screen.blit(text, (x, y))
+
+        age -= self.timer.get_time()
+        if age > 0:
+            return [x, y, delta_t, age]
+
+        return False
+
+if __name__ == "__main__":
+    game = MissionRed(display)
+
+    i = 0
+    while game.running:
+        game.timer.tick(fps)
+        if i % 32 == 0:
+            game.set_caption()
+
+        game.events = pygame.event.get()
+        game.catch_quit()
+
+        game.draw_background()
+        for t in game.targets:
+            game.draw_target(t)
+        new_shots = []
+        for shot in game.shots:
+            new_shot = game.draw_shot(shot)
+            if new_shot:
+                new_shots.append(new_shot)
+        game.shots = new_shots
+
+        game.catch_shot()
+        new_targets = []
+        for t in game.targets:
+            new_targets.append(game.update_target(t))
+        game.targets = new_targets
+
+        pygame.display.update()
+
+        i += 1
+        if i > 1024:
+            i = 0
+
+    pygame.quit()
