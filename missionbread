@@ -68,7 +68,7 @@ class MissionRed():
 
     def catch_shot(self):
         for event in self.events:
-            if event.type == pygame.MOUSEBUTTONUP:
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 mposx, mposy = pygame.mouse.get_pos()
 
                 new_targets = []
