@@ -14,7 +14,7 @@ if '-f' in sys.argv:
     display['sizes'] = (pygame.display.Info().current_w, pygame.display.Info().current_h)
 else:
     display['sizes'] = (800, 600)
-display['title'] = "MissionRed"
+display['title'] = "MissionBread"
 display['descr'] = "aim training drill"
 
 class Palette():
